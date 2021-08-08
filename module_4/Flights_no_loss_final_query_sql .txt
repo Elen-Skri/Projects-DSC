@@ -1,0 +1,92 @@
+Финальный запрос для сборки итогового датасета для оценки прибыльности полетов
+в рамках проекта DST - 4 Авиарейсы без потерь. 
+Елена Скрипниченко, Slack: Elena Skr
+
+WITH table_1 AS (
+--counting boarding passes 
+SELECT 
+    count(bp.boarding_no) total_seats_bought, 
+    f.flight_id
+FROM 
+    dst_project.boarding_passes bp 
+    LEFT JOIN dst_project.flights f ON bp.flight_id = f.flight_id
+GROUP BY f.flight_id), 
+
+    table_2 AS (
+--finding seats capability 
+SELECT 
+    count(DISTINCT s.seat_no) total_seats_capability,
+    a.aircraft_code,
+    a.model
+FROM
+    dst_project.aircrafts a 
+    JOIN dst_project.seats s ON s.aircraft_code = s.aircraft_code
+GROUP BY 
+    a.aircraft_code),
+    
+    table_3 AS (
+--finding total income for every flight 
+SELECT 
+    tf.flight_id, 
+    sum(amount) total_revenue
+FROM 
+    dst_project.ticket_flights tf
+GROUP BY 
+    1),
+    
+    table_4 AS( 
+-- counting tickets on fare conditions
+SELECT
+    tf.flight_id,
+    count(tf.ticket_no) AS tickets_sold,
+    count(CASE WHEN tf.fare_conditions = 'Economy' THEN tf.ticket_no END) AS tickets_economy,
+    count(CASE WHEN tf.fare_conditions = 'Comfort' THEN tf.ticket_no END) AS ticket_comfort,
+    count(CASE WHEN tf.fare_conditions = 'Business' THEN tf.ticket_no END) AS ticket_business,
+    sum(tf.amount) AS tickets_revenue,
+    sum(CASE WHEN tf.fare_conditions = 'Economy' THEN tf.amount END) AS economy_revenue,
+    sum(CASE WHEN tf.fare_conditions = 'Comfort' THEN tf.amount END) AS comfort_revenue,
+    sum(CASE WHEN tf.fare_conditions = 'Business' THEN tf.amount END) AS business_revenue
+FROM
+    dst_project.ticket_flights AS tf
+GROUP BY 
+    1),
+
+    table_5 AS (
+--finding flight duration
+SELECT 
+    f.flight_id,
+    (f.scheduled_arrival - f.scheduled_departure) AS flight_duration 
+FROM 
+    dst_project.flights f),
+    
+    table_6 AS( 
+-- finding late arrivals 
+SELECT 
+    f.flight_id, 
+    (f.scheduled_arrival - f.actual_arrival) AS flight_delay
+FROM 
+    dst_project.flights f 
+WHERE 
+    f.actual_arrival is not null)
+-- composition of results
+SELECT f.*, 
+    table_4.*, 
+    table_5.*,
+    table_1.total_seats_bought,
+    table_2.total_seats_capability,
+    table_3.total_revenue,
+    table_6.flight_delay, 
+    a.city
+
+FROM dst_project.flights f 
+    LEFT JOIN dst_project.airports a ON f.arrival_airport = a.airport_code
+    LEFT JOIN table_1 ON f.flight_id = table_1.flight_id
+    LEFT JOIN table_2 ON f.aircraft_code = table_2.aircraft_code 
+    LEFT JOIN table_3 ON f.flight_id = table_3.flight_id
+    LEFT JOIN table_4 ON f.flight_id = table_4.flight_id 
+    LEFT JOIN table_5 ON f.flight_id = table_5.flight_id
+    LEFT JOIN table_6 ON f.flight_id = table_6. flight_id
+-- task condition limits
+WHERE f.departure_airport = 'AAQ'
+  AND (date_trunc('month', f.scheduled_departure) in ('2017-01-01', '2017-02-01', '2017-12-01'))
+  AND f.status not in ('Cancelled')
