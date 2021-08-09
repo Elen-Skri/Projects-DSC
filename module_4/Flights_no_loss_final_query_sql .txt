@@ -1,6 +1,14 @@
-Финальный запрос для сборки итогового датасета для оценки прибыльности полетов
-в рамках проекта DST - 4 Авиарейсы без потерь. 
-Елена Скрипниченко, Slack: Elena Skr
+Skillfactory 
+DSPR-36
+Elena Sripnichenko 
+Slack: Elena Skr
+
+Project 4 Авиарейсы без потерь. 
+
+Final query assembling dataset for further analysis: 
+wintertime 2017 flights from Anapa city. 
+******************************************************************************
+
 
 WITH table_1 AS (
 --counting boarding passes 
@@ -24,17 +32,7 @@ FROM
 GROUP BY 
     a.aircraft_code),
     
-    table_3 AS (
---finding total income for every flight 
-SELECT 
-    tf.flight_id, 
-    sum(amount) total_revenue
-FROM 
-    dst_project.ticket_flights tf
-GROUP BY 
-    1),
-    
-    table_4 AS( 
+    table_3 AS( 
 -- counting tickets on fare conditions
 SELECT
     tf.flight_id,
@@ -51,7 +49,7 @@ FROM
 GROUP BY 
     1),
 
-    table_5 AS (
+    table_4 AS (
 --finding flight duration
 SELECT 
     f.flight_id,
@@ -59,7 +57,7 @@ SELECT
 FROM 
     dst_project.flights f),
     
-    table_6 AS( 
+    table_5 AS( 
 -- finding late arrivals 
 SELECT 
     f.flight_id, 
@@ -70,22 +68,20 @@ WHERE
     f.actual_arrival is not null)
 -- composition of results
 SELECT f.*, 
-    table_4.*, 
-    table_5.*,
+    table_3.*, 
+    table_4.*,
     table_1.total_seats_bought,
     table_2.total_seats_capability,
-    table_3.total_revenue,
-    table_6.flight_delay, 
+    table_5.flight_delay, 
     a.city
 
 FROM dst_project.flights f 
     LEFT JOIN dst_project.airports a ON f.arrival_airport = a.airport_code
     LEFT JOIN table_1 ON f.flight_id = table_1.flight_id
     LEFT JOIN table_2 ON f.aircraft_code = table_2.aircraft_code 
-    LEFT JOIN table_3 ON f.flight_id = table_3.flight_id
-    LEFT JOIN table_4 ON f.flight_id = table_4.flight_id 
-    LEFT JOIN table_5 ON f.flight_id = table_5.flight_id
-    LEFT JOIN table_6 ON f.flight_id = table_6. flight_id
+    LEFT JOIN table_3 ON f.flight_id = table_3.flight_id 
+    LEFT JOIN table_4 ON f.flight_id = table_4.flight_id
+    LEFT JOIN table_5 ON f.flight_id = table_5. flight_id
 -- task condition limits
 WHERE f.departure_airport = 'AAQ'
   AND (date_trunc('month', f.scheduled_departure) in ('2017-01-01', '2017-02-01', '2017-12-01'))
