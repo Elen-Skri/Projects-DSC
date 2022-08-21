@@ -1,4 +1,4 @@
-# Guess the number
+# Guess the number.
 Little try out of realizing a beautiful classic algorithm of *binary search* guessing
 a random number in a range from 0 to 100.
 
